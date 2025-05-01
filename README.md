@@ -9,26 +9,37 @@ I am running a live version of this code on [arxiv-sanity-lite.com](https://arxi
 
 #### To run
 
-To run this locally I usually run the following script to update the database with any new papers. I typically schedule this via a periodic cron job:
+To run this locally I usually run the script `update_paper_database` to update the database with any new papers.
 
 ```bash
 #!/bin/bash
 
-python3 arxiv_daemon.py --num 2000
+uv run python arxiv_daemon.py --num 2000
 
 if [ $? -eq 0 ]; then
     echo "New papers detected! Running compute.py"
-    python3 compute.py
+    uv run python compute.py
 else
     echo "No new papers were added, skipping feature computation"
 fi
 ```
+You can schedule this via a periodic cron job. First, you need to run the command `crontab -e` to open your 
+crontab editor, and then add the following line:
+
+```bash
+0 2 * * * cd <path-to-this-repo> && /bin/bash update_paper_database.sh >> cron.log 2>&1
+```
+This runs the script every day at 2:00 AM, logs output to `cron.log` in the same folder, and redirects errors to the
+same file.
+
 
 You can see that updating the database is a matter of first downloading the new papers via the arxiv api using `arxiv_daemon.py`, and then running `compute.py` to compute the tfidf features of the papers. Finally to serve the flask server locally we'd run something like:
 
 ```bash
-export FLASK_APP=serve.py; flask run
+export FLASK_APP=serve.py; uv run flask run >> flask.log 2>&1 &
 ```
+This puts the Flask server in the background and logs output. You now can access to `arxiv-sanity` by navigating to
+`127.0.0.1:5000`.
 
 All of the database will be stored inside the `data` directory. Finally, if you'd like to run your own instance on the interwebs I recommend simply running the above on a [Linode](https://www.linode.com), e.g. I am running this code currently on the smallest "Nanode 1 GB" instance indexing about 30K papers, which costs $5/month.
 
@@ -36,11 +47,20 @@ All of the database will be stored inside the `data` directory. Finally, if you'
 
 #### Requirements
 
- Install via requirements:
+I recommend using [uv](https://docs.astral.sh/uv/) to manage python packages and their dependencies.
 
- ```bash
- pip install -r requirements.txt
- ```
+First, we need to create a virtual environment. From the root of this repository, run:
+
+```bash
+uv venv
+```
+You should see a new folder with name `.venv` created.
+
+Next, install the required packages:
+
+```bash
+ uv pip install -r requirements.txt
+```
 
 #### Todos
 
